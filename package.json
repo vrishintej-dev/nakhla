@@ -1,0 +1,1 @@
+{"name":"nakhla","version":"0.1.0","type":"module","private":true,"scripts":{"test":"node --test","start":"npx --yes serve -l 5173 ."}}
