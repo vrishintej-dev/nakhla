@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   ecTargetForYield, leachingRequirement, tdsToEc, netNeedLitres, grossLitres,
   runMinutes, formatDuration, decideBlock, compareHabit, annualEstimate, DEFAULTS,
+  canopyFor, flowFromBottle,
 } from '../src/engine.js';
 import { LIWA } from '../src/data.js';
 
@@ -91,4 +92,20 @@ test('annualEstimate: a very salty well (EC 8) is wasted in winter but STARVED b
   const jan = r.months.find((m) => m.month === '2026-01');
   assert.ok(june.nakhlaL > DEFAULTS.habitL, 'habit under-waters salty block in June → salt builds up');
   assert.ok(jan.nakhlaL < DEFAULTS.habitL, 'habit over-waters in January');
+});
+
+test('palm size: young palms need a third of a mature palm', () => {
+  const day = { et0: 6, rain: 0 };
+  const mature = decideBlock({ ...blockB, size: 'mature' }, day, DEFAULTS);
+  const young = decideBlock({ ...blockB, size: 'young' }, day, DEFAULTS);
+  near(young.netL, mature.netL / 3, 1e-9);
+  assert.equal(canopyFor({}), DEFAULTS.canopyM2, 'blocks without a size default to mature');
+});
+
+test('bottle test: 1 L in 225 s = 16 L/h; a clogged dripper means a longer run', () => {
+  near(flowFromBottle(225), 16, 1e-9);
+  assert.equal(flowFromBottle(0), 0);
+  const ok = decideBlock(blockB, { et0: 5, rain: 0 }, DEFAULTS);
+  const clogged = decideBlock({ ...blockB, flowLph: flowFromBottle(300) }, { et0: 5, rain: 0 }, DEFAULTS);
+  assert.ok(clogged.minutes > ok.minutes);
 });
