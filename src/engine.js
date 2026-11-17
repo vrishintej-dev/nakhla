@@ -10,6 +10,20 @@ export const DEFAULTS = Object.freeze({
   rainFactor: 0.8,   // share of rain that counts as effective
 });
 
+// Effective canopy area by palm size (m²). Young palms shade far less ground.
+export const PALM_SIZES = Object.freeze({
+  young: { label: 'Young (1–4 yrs)', canopyM2: 6 },
+  medium: { label: 'Medium (5–9 yrs)', canopyM2: 12 },
+  mature: { label: 'Mature (10+ yrs)', canopyM2: 18 },
+});
+
+export const canopyFor = (block, fallback = DEFAULTS.canopyM2) =>
+  (PALM_SIZES[block.size] && PALM_SIZES[block.size].canopyM2) || fallback;
+
+// Bottle test: seconds for one emitter to fill a 1-litre bottle → litres per hour.
+// Salty water clogs drippers, so the real flow is often below the label.
+export const flowFromBottle = (seconds, litres = 1) => (seconds > 0 ? (litres * 3600) / seconds : 0);
+
 // FAO-29: date palm yield is 100% up to ECe 4.0 dS/m, then drops 3.6% per dS/m.
 export const ecTargetForYield = (yieldPct) => 4.0 + (100 - yieldPct) / 3.6;
 
@@ -50,7 +64,8 @@ export function decideBlock(block, day, settings = DEFAULTS) {
   const ecTarget = ecTargetForYield(s.targetYield);
   const lr = leachingRequirement(block.ecw, ecTarget);
   const saltWarning = !Number.isFinite(lr);
-  const netL = netNeedLitres({ et0: day.et0, rainMm: day.rain || 0, kc: s.kc, canopyM2: s.canopyM2, rainFactor: s.rainFactor });
+  const canopyM2 = canopyFor(block, s.canopyM2);
+  const netL = netNeedLitres({ et0: day.et0, rainMm: day.rain || 0, kc: s.kc, canopyM2, rainFactor: s.rainFactor });
   const lrUsed = saltWarning ? 0 : lr;
   const grossL = grossLitres(netL, { efficiency: s.efficiency, lr: lrUsed });
   const flushL = grossL - netL / s.efficiency;
@@ -60,7 +75,7 @@ export function decideBlock(block, day, settings = DEFAULTS) {
   const appliedL = (minutes / 60) * block.emitters * block.flowLph;
   const savedM3 = ((s.habitL - appliedL) * block.palms) / 1000;
   return {
-    block: block.name, netL, grossL, appliedL, flushL, lr: lrUsed, ecTarget,
+    block: block.name, canopyM2, netL, grossL, appliedL, flushL, lr: lrUsed, ecTarget,
     minutes, habitL: s.habitL, habitMinutes, savedM3, saltWarning,
     underWateredByHabit: s.habitL < grossL,
   };

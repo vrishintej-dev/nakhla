@@ -1,4 +1,4 @@
-import { DEFAULTS, decideBlock, compareHabit, annualEstimate, formatDuration, tdsToEc } from './engine.js';
+import { DEFAULTS, decideBlock, compareHabit, annualEstimate, formatDuration, tdsToEc, PALM_SIZES, flowFromBottle } from './engine.js';
 import { buildMessage, smsInfo, hmm, LANGS } from './messages.js';
 import { LIWA, LOCATIONS } from './data.js';
 
@@ -13,8 +13,8 @@ const DEFAULT_FARM = {
   habitL: DEFAULTS.habitL,
   targetYield: DEFAULTS.targetYield,
   blocks: [
-    { name: 'A', label: 'North (blended water)', palms: 120, ecw: 1.5, emitters: 4, flowLph: 16 },
-    { name: 'B', label: 'South (brackish well)', palms: 200, ecw: 6, emitters: 4, flowLph: 16 },
+    { name: 'A', label: 'North (blended water)', palms: 120, size: 'mature', ecw: 1.5, emitters: 4, flowLph: 16 },
+    { name: 'B', label: 'South (brackish well)', palms: 200, size: 'mature', ecw: 6, emitters: 4, flowLph: 16 },
   ],
 };
 
@@ -153,11 +153,11 @@ function renderBlocks(decisions) {
       ${d.lr >= 0.4 ? blendTip(b, d) : ''}
       <details><summary>Why ${formatDuration(d.minutes)}?</summary>
         <ul class="why">
-          <li><span>Palm uses today (ET0 × 0.95 × ${DEFAULTS.canopyM2} m²)</span><span>${num(d.netL)} L</span></li>
+          <li><span>Palm uses today (ET0 × 0.95 × ${d.canopyM2} m² canopy)</span><span>${num(d.netL)} L</span></li>
           <li><span>Drip losses (${Math.round(DEFAULTS.efficiency * 100)}% efficient)</span><span>+${num(d.netL / DEFAULTS.efficiency - d.netL)} L</span></li>
           <li><span>Salt flush (LR ${num(d.lr * 100)}% for ${num(b.ecw, 1)} dS/m)</span><span>+${num(d.flushL)} L</span></li>
           <li><span>Needed per palm</span><span>${num(d.grossL)} L</span></li>
-          <li><span>${b.emitters} emitters × ${b.flowLph} L/h, rounded up</span><span>${formatDuration(d.minutes)}</span></li>
+          <li><span>${b.emitters} emitters × ${num(b.flowLph, 1)} L/h, rounded up</span><span>${formatDuration(d.minutes)}</span></li>
           <li><span>Habit (${d.habitL} L/palm)</span><span>${formatDuration(d.habitMinutes)}</span></li>
         </ul>
       </details>
@@ -174,7 +174,7 @@ function renderBlocks(decisions) {
 // Hidden problem: on a very salty well most of the water only flushes salt.
 function blendTip(b, d) {
   const cleaner = state.farm.blocks.filter((x) => x !== b && x.ecw < b.ecw).sort((x, y) => x.ecw - y.ecw)[0];
-  const day = { et0: d.netL / (DEFAULTS.kc * DEFAULTS.canopyM2), rain: 0 };
+  const day = { et0: d.netL / (DEFAULTS.kc * d.canopyM2), rain: 0 };
   const at90 = decideBlock(b, day, { ...settings(), targetYield: 90 });
   let txt = `${num(d.lr * 100)}% of this water only flushes salt. A 90% yield target cuts it to ${num(at90.grossL)} L/palm`;
   if (cleaner) {
@@ -316,10 +316,12 @@ function renderFarm() {
       <label class="f">Name<input data-k="name" value="${esc(b.name)}" maxlength="3"></label>
       <label class="f">Description<input data-k="label" value="${esc(b.label || '')}"></label>
       <label class="f">Palms<input data-k="palms" type="number" min="1" value="${b.palms}"></label>
+      <label class="f">Palm size<select data-k="size">${Object.entries(PALM_SIZES).map(([k, v]) => `<option value="${k}" ${k === (b.size || 'mature') ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
       <label class="f">Water EC (dS/m)<input data-k="ecw" type="number" min="0" step="0.1" value="${b.ecw}"></label>
       <label class="f">…or TDS pen (ppm)<input data-k="tds" type="number" min="0" step="10" placeholder="e.g. 3840"></label>
       <label class="f">Emitters per palm<input data-k="emitters" type="number" min="1" value="${b.emitters}"></label>
-      <label class="f">Flow per emitter (L/h)<input data-k="flowLph" type="number" min="1" value="${b.flowLph}"></label>
+      <label class="f">Flow per emitter (L/h)<input data-k="flowLph" type="number" min="1" step="0.1" value="${b.flowLph}"></label>
+      <label class="f">…or bottle test: seconds to fill 1 L<input data-k="bottle" type="number" min="1" placeholder="e.g. 225"></label>
     </fieldset>`).join('')}
     <fieldset class="fblock"><legend>Farm</legend>
       <label class="f">Habit today (L/palm/day)<input id="habit" type="number" min="0" step="10" value="${f.habitL}"></label>
@@ -343,7 +345,10 @@ function onFarmInput(e) {
     const k = t.dataset.k;
     if (k === 'tds') {
       if (t.value) { b.ecw = +tdsToEc(+t.value).toFixed(2); fs.querySelector('[data-k="ecw"]').value = b.ecw; }
-    } else if (k === 'name' || k === 'label') b[k] = t.value || (k === 'name' ? '?' : '');
+    } else if (k === 'bottle') {
+      if (+t.value > 0) { b.flowLph = +flowFromBottle(+t.value).toFixed(1); fs.querySelector('[data-k="flowLph"]').value = b.flowLph; }
+    } else if (k === 'size') b.size = t.value;
+    else if (k === 'name' || k === 'label') b[k] = t.value || (k === 'name' ? '?' : '');
     else b[k] = Math.max(k === 'ecw' ? 0 : 1, +t.value || 0);
   }
   store.set('nakhla:farm', state.farm);
@@ -364,7 +369,7 @@ function init() {
   $('farm').addEventListener('click', (e) => {
     if (e.target.id === 'add-block') {
       const name = String.fromCharCode(65 + state.farm.blocks.length);
-      state.farm.blocks.push({ name, label: 'New block', palms: 100, ecw: 3, emitters: 4, flowLph: 16 });
+      state.farm.blocks.push({ name, label: 'New block', palms: 100, size: 'young', ecw: 3, emitters: 4, flowLph: 16 });
     } else if (e.target.id === 'rm-block') {
       state.farm.blocks.pop();
       state.chartBlock = Math.min(state.chartBlock, state.farm.blocks.length - 1);
