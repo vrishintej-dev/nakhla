@@ -26,3 +26,13 @@
 - **Is it real data?** Yes. Weather is real Open-Meteo/ERA5 for Liwa, and the habit benchmark is from the EAD study. The farm layout is a realistic demo farm and can be edited.
 - **Why not ML?** FAO-56 is the agronomic standard, it's explainable to a farmer, and it needs no training data. We validated it against field measurements.
 - **What if the EC reading is wrong?** We round run times up, warn on unusable water, and ask for a monthly re-test.
+
+## "What are the drawbacks?" (answer with confidence)
+Say: "Three honest ones, and what we've already done about them."
+1. **Hand-entered water salinity.** If the reading is wrong, the flush is wrong. We round every run time *up*, block water that's too salty to use, and the next step is a Bluetooth EC pen.
+2. **It models salt instead of measuring it in the soil.** FAO-29 is a steady-state model. Next is one soil EC test a month per block to correct it.
+3. **No feedback loop yet.** We don't know whether the worker actually ran the plan. Next is a WhatsApp bot where the worker replies "done", plus a flow meter.
+
+Then show what we already fixed during the hackathon:
+- **Palm size per block:** young palms need about a third of the water, so it isn't one-size-fits-all.
+- **Bottle test:** time one dripper filling a 1-litre bottle. Salty water clogs drippers, and this catches it for free.
