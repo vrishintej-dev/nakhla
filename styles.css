@@ -125,3 +125,4 @@ footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 18p
   .bar.n, .bar.h, .key i { forced-color-adjust: none; }
 }
 .hint { background: var(--water-soft); color: #134a70; border-radius: 10px; padding: 8px 10px; font-size: .84rem; margin: 8px 0 0; }
+label.f select { width: 100%; }

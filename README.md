@@ -48,5 +48,16 @@ Deploy: drag the folder onto Netlify Drop, or push it to GitHub Pages / Vercel (
 ## Files
 `src/engine.js` decision maths · `src/messages.js` multilingual SMS · `src/data.js` real weather snapshot · `src/app.js` UI · `sw.js` offline cache · `test/` unit tests · `PRODUCT-BRIEF.md` · `docs/DEMO-SCRIPT.md`
 
-## Future work
-Read the EC pen over Bluetooth, set up a real WhatsApp Business bot (Twilio), satellite NDVI to spot stressed palms, and per-block soil salinity tracking.
+## Limitations (honest) and what we'd do next
+| Drawback | Why it matters | Status / fix |
+|---|---|---|
+| Every palm treated the same size | Young palms need ~⅓ of a mature palm's water | **Fixed:** palm size per block (young / medium / mature canopy) |
+| Assumes drippers give their rated flow | Salty water clogs drippers, so the real flow drops and palms get less than we think | **Fixed:** 1-litre bottle test per block converts to real L/h |
+| Steady-state salt model (FAO-29) | We don't measure the root-zone salt itself | Next: a monthly soil EC reading per block to correct the flush fraction |
+| Water EC is typed in by hand | A wrong or stale reading gives a wrong flush | Run times round **up**; unusable water is blocked; next: Bluetooth EC pen and a "re-test" reminder |
+| Weather is per coordinate, not per farm microclimate | Shelter belts and humidity near the farm differ | Next: one cheap on-farm temperature/humidity logger to correct ET0 |
+| Kc and canopy are textbook values | Varieties and spacing differ | Validated against EAD sap-flow (176 L June / 62 L Jan); next: calibrate with each farm's meter readings |
+| No feedback loop | We don't know whether the worker actually ran the plan | Next: a WhatsApp Business bot where the worker replies "done", plus a flow meter |
+| Translations not checked by native speakers | Message clarity for workers | Next: review with farm workers; read-aloud depends on the phone's voices |
+| Offline fallback is Liwa only | Other farms need to be online once | Each farm's forecast is cached after its first load |
+| No money figure | Owners think in AED | Next: pump energy / water-tanker cost per m³ entered by the owner |

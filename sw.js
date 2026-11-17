@@ -1,5 +1,5 @@
 // Offline-first app shell: the farm still gets a plan with no signal.
-const CACHE = 'nakhla-v1';
+const CACHE = 'nakhla-v2';
 const SHELL = ['./', 'index.html', 'styles.css', 'manifest.webmanifest', 'src/app.js', 'src/engine.js', 'src/messages.js', 'src/data.js'];
 
 self.addEventListener('install', (e) => {
